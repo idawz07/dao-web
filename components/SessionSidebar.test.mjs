@@ -5,8 +5,11 @@ import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" }, tsconfigPaths: true });
 const { getSessionListIndices } = await jiti.import("./SessionSidebar.tsx");
+const { buildSidebarTreeRows } = await jiti.import("../lib/sidebar-tree.ts");
 
 const source = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
+const sidebarTreeSource = await readFile(new URL("../lib/sidebar-tree.ts", import.meta.url), "utf8");
+const projectTreeRowSource = await readFile(new URL("./ProjectTreeRow.tsx", import.meta.url), "utf8");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
 
 test("scrolling keeps the focused session and the viewport mounted without expanding the whole window", () => {
@@ -78,11 +81,11 @@ test("subagent completion stays silent and never becomes unread", () => {
 
 test("includes project activity counts in accessible labels", () => {
   assert.match(
-    source,
+    projectTreeRowSource,
     /aria-label=\{`\$\{t\("sidebar\.agentRunning"\)\} \(\$\{activity\.running\}\)`\}/,
   );
   assert.match(
-    source,
+    projectTreeRowSource,
     /aria-label=\{`\$\{t\("sidebar\.newSessionActivity"\)\} \(\$\{activity\.unread\}\)`\}/,
   );
 });
@@ -123,8 +126,81 @@ test("does not expose disk-backed actions for transient sessions", () => {
 });
 
 test("hides subagent rows and aggregates their state into the main session row", () => {
-  assert.match(source, /const sessionFamilies = listSessionFamilies\(filteredSessions\)/);
+  assert.match(sidebarTreeSource, /listSessionFamilies\(sessionsForProject\(sessions, project\.key\)\)/);
   assert.match(source, /familySessions\.some\(\(session\) => session\.id === selectedSessionId\)/);
   assert.match(source, /familySessions\.some\(\(session\) => runningSessionIds\.has\(session\.id\)\)/);
   assert.doesNotMatch(source, /function SessionTreeItem/);
+});
+
+test("row builder flattens projects into uniform header/session rows", () => {
+  const session = (id, cwd, modified, extra = {}) => ({
+    id,
+    cwd,
+    modified,
+    name: `name-${id}`,
+    firstMessage: `first-${id}`,
+    ...extra,
+  });
+  const sessions = [
+    session("s1", "/repo/a/src", "2025-01-01T00:00:00Z", { projectKey: "ws-a", projectRoot: "/repo/a" }),
+    session("s2", "/repo/a", "2025-01-03T00:00:00Z", { projectKey: "ws-a", projectRoot: "/repo/a" }),
+    session("s3", "/repo/b", "2025-01-02T00:00:00Z", { projectKey: "ws-b", projectRoot: "/repo/b" }),
+  ];
+  const projects = [
+    { key: "ws-a", root: "/repo/a" },
+    { key: "ws-b", root: "/repo/b" },
+  ];
+
+  const collapsed = buildSidebarTreeRows(projects, new Set(), sessions, "ws-a");
+  assert.deepEqual(collapsed.map((row) => row.kind), ["project", "project"]);
+  assert.equal(collapsed[0].isActive, true);
+  assert.equal(collapsed[1].isActive, false);
+  // Headers carry the session count even while collapsed.
+  assert.equal(collapsed[0].sessionCount, 2);
+  assert.equal(collapsed[1].sessionCount, 1);
+
+  const expanded = buildSidebarTreeRows(projects, new Set(["ws-a"]), sessions, "ws-a");
+  assert.deepEqual(expanded.map((row) => row.kind), ["project", "session", "session", "project"]);
+  assert.equal(expanded[1].family.root.id, "s2");
+  assert.equal(expanded[2].family.root.id, "s1");
+  assert.equal(expanded[3].expanded, false);
+
+  const emptyProject = buildSidebarTreeRows(
+    [{ key: "ws-empty", root: "/repo/empty" }],
+    new Set(["ws-empty"]),
+    sessions,
+    "ws-empty",
+  );
+  assert.deepEqual(emptyProject.map((row) => row.kind), ["project", "empty"]);
+});
+
+test("row builder inherits the family's latest modified time for display", () => {
+  const session = (id, modified, extra = {}) => ({
+    id,
+    cwd: "/repo/a",
+    modified,
+    name: `name-${id}`,
+    firstMessage: `first-${id}`,
+    ...extra,
+  });
+  const sessions = [
+    session("main", "2025-01-01T00:00:00Z", { projectKey: "ws-a", projectRoot: "/repo/a" }),
+    session("agent", "2025-01-04T00:00:00Z", {
+      projectKey: "ws-a",
+      projectRoot: "/repo/a",
+      relation: { kind: "subagent", parentSessionId: "main" },
+    }),
+  ];
+  const rows = buildSidebarTreeRows(
+    [{ key: "ws-a", root: "/repo/a" }],
+    new Set(["ws-a"]),
+    sessions,
+    "ws-a",
+  );
+  assert.deepEqual(rows.map((row) => row.kind), ["project", "session"]);
+  const row = rows[1];
+  assert.equal(row.family.root.id, "main");
+  assert.equal(row.family.subagents.length, 1);
+  assert.equal(row.displaySession.modified, "2025-01-04T00:00:00Z");
+  assert.deepEqual(row.familySessions.map((s) => s.id), ["main", "agent"]);
 });

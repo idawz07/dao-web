@@ -1,6 +1,6 @@
 import type { LocalePlugin } from "../types";
 
-/** Pi Web 内置英语语言包。 */
+/** Dao Web 内置英语语言包。 */
 export const enLocale: LocalePlugin = {
   id: "en",
   label: "English",
@@ -14,7 +14,7 @@ export const enLocale: LocalePlugin = {
     "common.settings": "Settings",
     "settings.title": "Settings",
     "settings.general": "General",
-    "settings.generalDescription": "Choose how Pi Web looks and which language it uses.",
+    "settings.generalDescription": "Choose how Dao Web looks and which language it uses.",
     "settings.appearance": "Appearance",
     "settings.appearanceDescription": "Select a theme or follow your system preference.",
     "settings.chatContentWidth": "Chat content width",
@@ -51,8 +51,8 @@ export const enLocale: LocalePlugin = {
     "skills.scope.project": "project",
     "skills.scope.path": "path",
     "agents.close": "Close",
-    "agents.builtInTitle": "Enable Pi Web built-in sub-agents",
-    "agents.builtInDescription": "Provides Pi Web's integrated Agent tools and disables a conflicting pi-subagents extension.",
+    "agents.builtInTitle": "Enable Dao Web built-in sub-agents",
+    "agents.builtInDescription": "Provides Dao Web's integrated Agent tools and disables a conflicting pi-subagents extension.",
     "agents.reloadRequired": "Reload the current session to apply this change.",
     "agents.reloadSession": "Reload session",
     "agents.reloading": "Reloading...",
@@ -105,7 +105,7 @@ export const enLocale: LocalePlugin = {
     "agentSwitcher.status.failed": "Failed",
     "agentSwitcher.status.aborted": "Aborted",
     "agentSwitcher.status.interrupted": "Interrupted",
-    "appUpdate.releaseNotes": "Pi Web v{version} is available. View release notes",
+    "appUpdate.releaseNotes": "Dao Web v{version} is available. View release notes",
     "sidebar.hide": "Hide sidebar",
     "sidebar.show": "Show sidebar",
     "theme.light": "Theme: Light",
@@ -194,6 +194,10 @@ export const enLocale: LocalePlugin = {
     "layout.resizeHint": "Drag to resize. Double-click or press Enter to reset.",
     "sidebar.new": "New",
     "sidebar.newSessionTitle": "New session in {path}",
+    "sidebar.newSessionInProject": "New session in {path}",
+    "sidebar.expandProject": "Expand project",
+    "sidebar.collapseProject": "Collapse project",
+    "sidebar.sessionCount": "{count} sessions",
     "sidebar.refresh": "Refresh",
     "sidebar.selectProject": "Select project…",
     "sidebar.filterProjects": "Filter projects…",
